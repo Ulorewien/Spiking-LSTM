@@ -1,7 +1,9 @@
 import unicodedata
+import os
 import torch
 import time
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 def unicodeToAscii(s, all_letters):
     return ''.join(
@@ -52,4 +54,23 @@ def plotMetrics(avg_losses, train_acc, test_acc, plot_every):
     plt.xlabel(f"No. of Epochs (x{plot_every})")
     plt.subplots_adjust(hspace=0.6)
     plt.savefig("SpikingLSTMTraining.svg")
+    plt.close()
+
+def get_all_classes(dir):
+    return [lang.replace(".txt", "") for lang in os.listdir(dir) if lang.endswith('.txt')]
+
+def plot_confusion_matrix(confusion, all_classes):
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111)
+    cax = ax.matshow(confusion.numpy())
+    fig.colorbar(cax)
+
+    ax.set_xticklabels([''] + all_classes, rotation=90)
+    ax.set_yticklabels([''] + all_classes)
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    
+    plt.show()
+    plt.savefig("Confusion_Matrix.svg")
     plt.close()
