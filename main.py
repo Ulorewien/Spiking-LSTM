@@ -1,12 +1,12 @@
 import string
 import time
-from random import randint
+from random import randint, random
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from dataset import NamesDataset
-from util import encode, predictClass, trainTime, plotMetrics
+from util import encode, predictClass, trainTime, plotMetrics, plot_confusion_matrix
 from model import SpikingLSTM
 
 # Global variables
@@ -17,13 +17,13 @@ num_letters = len(all_letters)
 # Hyperparameters
 batch_size = 1
 learning_rate = 1e-4
-num_epochs = 100000
+num_epochs = 1000000
 split_ratio = 0.8
 hidden_size = 256
 
 # Additional variables
 num_classes = 18
-plot_every = 1000
+plot_every = 10000
 print_every = 100
 
 # Load the dataset
@@ -84,7 +84,7 @@ for epoch in range(1, num_epochs+1):
                     num_correct += 1
             
             test_acc.append(num_correct/len(test_data))
-            print(f"Epoch {epoch} {trainTime(start_time)}: train loss {avg_losses[-1]}; train accuracy {train_acc[-1]}; test accuracy {test_acc[-1]}")
+            print(f"Epoch {epoch} {trainTime(start_time)}: train loss {avg_losses[-1]:.3f}; train accuracy {train_acc[-1]:.3f}; test accuracy {test_acc[-1]:.3f}")
 
 # Save the model and metrics
 torch.save(model, "spiking_lstm.pth")
@@ -94,3 +94,24 @@ np.save("test_acc.npy", np.array(test_acc))
 
 # Plot Metrics
 plotMetrics(avg_losses, train_acc, test_acc, plot_every)
+
+# Plot Confusion Matrix
+confusion = torch.zeros(num_classes, num_classes)
+num_confusion = 10000
+
+for i in range(num_confusion):
+    if random() > 0.8:
+        random_idx = randint(0, len(dataset)-1)
+        name, lang = dataset[random_idx]
+    else:
+        random_idx = randint(0, len(test_data)-1)
+        name, lang = test_data[random_idx]
+    prediction = model(encode(name, num_letters, all_letters))
+    guess, guess_i = predictClass(prediction.data, dataset.languages)
+    category_i = dataset.languages.index(lang)
+    confusion[category_i][guess_i] += 1
+
+confusion = confusion/confusion.sum(1)
+np.save("confusion.npy", confusion)
+
+plot_confusion_matrix(confusion, dataset.languages)
